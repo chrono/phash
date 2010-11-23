@@ -72,7 +72,7 @@ extern "C" void ph_image_hash_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
 	ulong64 * resource = (ulong64 *)(rsrc->ptr);
 
-	if(resource)
+	if(resource)                  
 		free(resource);
 }
 
@@ -140,7 +140,7 @@ zend_module_entry pHash_module_entry = {
 	PHP_RINIT(pHash),     /* Replace with NULL if there is nothing to do at request start */
 	PHP_RSHUTDOWN(pHash), /* Replace with NULL if there is nothing to do at request end   */
 	PHP_MINFO(pHash),
-	"0.9.1", 
+	"0.9.3", 
 	STANDARD_MODULE_PROPERTIES
 };
 /* }}} */
@@ -217,7 +217,7 @@ PHP_MINFO_FUNCTION(pHash)
 	php_printf("' align='right' alt='image' border='0'>\n");
 
 	php_printf("<p>pHash</p>\n");
-	php_printf("<p>Version 0.9.1beta (2010-06-12)</p>\n");
+	php_printf("<p>Version 0.9.3 (2010-08-28)</p>\n");
 	php_printf("<p><b>Authors:</b></p>\n");
 	php_printf("<p>Evan Klinger &lt;eklinger@phash.org&gt; (lead)</p>\n");
 	php_info_print_box_end();
@@ -264,7 +264,7 @@ PHP_FUNCTION(ph_dct_videohash)
 #endif /* HAVE_VIDEO_HASH */
 
 #if HAVE_IMAGE_HASH
-/* {{{ proto resource ph_image_hash ph_dct_imagehash(string file)
+/* {{{ proto long ph_image_hash ph_dct_imagehash(string file)
   pHash DCT image hash */
 PHP_FUNCTION(ph_dct_imagehash)
 {
@@ -273,6 +273,9 @@ PHP_FUNCTION(ph_dct_imagehash)
 
 	const char * file = NULL;
 	int file_len = 0;
+	char buffer [64];
+	int n;
+	char *str;
 
 
 
@@ -282,15 +285,15 @@ PHP_FUNCTION(ph_dct_imagehash)
 
 	ulong64 *hash = (ulong64 *)malloc(sizeof(ulong64));
 	int ret = ph_dct_imagehash(file, *hash);
-	if(ret != 0)
-	{
+	if(ret != 0) {
 		free(hash);
 		RETURN_FALSE;
+	} else {
+		n = sprintf(buffer, "%016llx", *hash);
+		str = estrdup(buffer);
+		free(hash);
+		RETURN_STRING(str, 0);
 	}
-	else
-		return_res = hash;
-
-	return_res_id = ZEND_REGISTER_RESOURCE(return_value, return_res, le_ph_image_hash);
 }
 /* }}} ph_dct_imagehash */
 
@@ -383,25 +386,31 @@ PHP_FUNCTION(ph_image_dist)
 {
 	zval * h1_res = NULL;
 	int h1_resid = -1;
-	ulong64 * h1;
+	//ulong64 * h1;
 	zval * h2_res = NULL;
 	int h2_resid = -1;
-	ulong64 * h2;
+	//ulong64 * h2;
+	char *num1;
+	int num1_len;
+	char *num2;
+	int num2_len;
 
 
 
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rr", &h1_res, &h2_res) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &num1, &num1_len, &num2, &num2_len) == FAILURE) {
 		return;
 	}
-	ZEND_FETCH_RESOURCE(h1, ulong64 *, &h1_res, h1_resid, "ph_image_hash", le_ph_image_hash);
-	ZEND_FETCH_RESOURCE(h2, ulong64 *, &h2_res, h2_resid, "ph_image_hash", le_ph_image_hash);
 
-
-
+	ulong64 h1;
+	ulong64 h2;
+	
+	h1 = strtoull(num1, NULL, 16);
+	h2 = strtoull(num2, NULL, 16);
+	
 	if(h1 && h2)
 	{
-		int dist = ph_hamming_distance(*h1, *h2);
+		int dist = ph_hamming_distance(h1, h2);
 		RETURN_DOUBLE(dist);
 	}
 	else
